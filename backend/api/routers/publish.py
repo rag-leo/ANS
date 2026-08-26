@@ -33,3 +33,11 @@ def publish_content(
         "status": "success",
         "message": "Content marked as published",
     }
+
+
+@router.get(
+    "/history"
+)
+def get_history():
+
+    return repository.get_published_notifications()

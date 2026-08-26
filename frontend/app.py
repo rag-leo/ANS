@@ -9,6 +9,9 @@ from api_client import (
     search,
     generate_content,
     publish_content,
+    get_notification_history,
+    get_analytics_summary,
+    submit_evaluation,
 )
 
 
@@ -343,6 +346,11 @@ if search_button:
                 )
             )
 
+
+            print("\n===== GENERATION RESPONSE =====")
+            print(generation_response)
+            print("===============================\n")
+
             st.session_state.generated_response = (
                 generation_response
             )
@@ -377,8 +385,9 @@ with left_col:
 
         if not results:
 
-            st.info(
-                "Search results will appear here."
+            st.warning(
+                "No articles found matching the "
+                "selected filters."
             )
 
         else:
@@ -436,70 +445,331 @@ with right_col:
 
         if generated_response:
 
-            st.markdown(
-                f"### {generated_response['title']}"
-            )
-
-            st.text_area(
-                "Generated Communication",
-                generated_response["content"],
-                height=400,
-            )
-
-            st.caption(
-                f"Articles Used: "
-                f"{generated_response['article_count']}"
-            )
-
-            if st.button(
-                "✅ Mark as Published",
-                use_container_width=True,
+            if (
+                generated_response["article_count"]
+                == 0
             ):
 
-                try:
+                st.warning(
+                    "No articles matched the selected filters."
+                )
 
-                    publish_content(
-                        article_ids=(
-                            generated_response[
-                                "article_ids"
-                            ]
-                        ),
-                        generation_type=(
-                            st.session_state[
-                                "generation_type"
-                            ]
-                        ),
-                        language=(
-                            st.session_state[
-                                "language"
-                            ]
-                        ),
-                    )
+                st.info(
+                    "Try changing crop, category, source, or search query."
+                )
 
-                    st.success(
-                        "Content marked as published."
-                    )
+            else:
 
-                except Exception as ex:
+                st.markdown(
+                    f"### {generated_response['title']}"
+                )
 
-                    st.error(
-                        f"Publishing failed: "
-                        f"{str(ex)}"
-                    )
+                st.text_area(
+                    "Generated Communication",
+                    generated_response["content"],
+                    height=400,
+                )
+
+                st.caption(
+                    f"Articles Used: "
+                    f"{generated_response['article_count']}"
+                )
+
+                with st.expander(
+                    "📚 Source Articles"
+                ):
+
+                    for article in (
+                        generated_response[
+                            "source_articles"
+                        ]
+                    ):
+
+                        st.write(
+                            article["title"]
+                        )
+
+                        st.caption(
+                            f"""
+                        Crop: {article['crop']}
+                        |
+                        Source: {article['source']}
+                        |
+                        Similarity: {article['score']}
+                        """
+                        )
+
+                    st.divider()                
+
+                if st.button(
+                    "✅ Mark as Published",
+                    use_container_width=True,
+                ):
+
+                    try:
+
+                        publish_content(
+                            article_ids=(
+                                generated_response[
+                                    "article_ids"
+                                ]
+                            ),
+                            generation_type=(
+                                st.session_state[
+                                    "generation_type"
+                                ]
+                            ),
+                            language=(
+                                st.session_state[
+                                    "language"
+                                ]
+                            ),
+                        )
+
+                        st.success(
+                            "Content marked as published."
+                        )
+
+                    except Exception as ex:
+
+                        st.error(
+                            f"Publishing failed: {str(ex)}"
+                        )
 
         else:
 
             st.info(
                 "Generated content will appear here."
             )
+
+st.markdown(
+    "## ✅ Evaluation"
+)
+
+retrieval_relevance = st.slider(
+    "Retrieval Relevance",
+    1,
+    5,
+    3,
+)
+
+crop_focus = st.slider(
+    "Crop Focus",
+    1,
+    5,
+    3,
+)
+
+faithfulness = st.slider(
+    "Faithfulness",
+    1,
+    5,
+    3,
+)
+
+communication_quality = st.slider(
+    "Communication Quality",
+    1,
+    5,
+    3,
+)
+
+language_compliance = st.checkbox(
+    "Output follows requested language"
+)
+
+comments = st.text_area(
+    "Comments"
+)
+
+if st.button(
+    "Save Evaluation"
+):
+
+    payload = {
+        "query": query,
+        "crop": crop,
+        "category": category,
+        "language": language,
+        "generation_type": generation_type,
+        "retrieval_relevance": retrieval_relevance,
+        "crop_focus": crop_focus,
+        "faithfulness": faithfulness,
+        "communication_quality": communication_quality,
+        "language_compliance": language_compliance,
+        "comments": comments,
+    }
+
+    submit_evaluation(
+        payload
+    )
+
+    st.success(
+        "Evaluation saved successfully."
+    )
 # ==========================================================
 # Footer
 # ==========================================================
 
 st.divider()
 
+st.subheader(
+    "📋 Published Notifications"
+)
+
+import pandas as pd
+
+history = get_notification_history()
+
+if history:
+
+    df = pd.DataFrame(history)
+
+    st.dataframe(
+        df[
+            [
+                "published_at",
+                "title",
+                "crop",
+                "source",
+                "generation_type",
+                "language",
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+
 st.caption(
     f"Environment: Connected to {BACKEND_URL}"
     if backend_healthy
     else "Backend unavailable"
 )
+
+
+# =====================================================
+
+st.subheader(
+    "📊 ANS Analytics"
+)
+
+analytics = (
+    get_analytics_summary()
+)
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Articles",
+    analytics[
+        "total_articles"
+    ],
+)
+
+col2.metric(
+    "Chunks",
+    analytics[
+        "total_chunks"
+    ],
+)
+
+col3.metric(
+    "Published",
+    analytics[
+        "published_notifications"
+    ],
+)
+
+generation_map = {
+    item["generation_type"]:
+    item["count"]
+        for item in analytics["generation_counts"]
+}
+
+col1,col2, col3 = st.columns(3)
+
+col1.metric(
+    "Push",
+    generation_map.get(
+        "push",
+        0,
+   ),
+)
+
+col2.metric(
+    "WhatsApp",
+    generation_map.get(
+       "whatsapp",
+        0,
+    ),
+)
+
+col3.metric(
+    "Newsletter",
+    generation_map.get(
+        "newsletter",
+        0,
+    ),
+)
+
+st.markdown(
+    "### 📢 Generation Breakdown"
+)
+
+st.markdown(
+    "### 🌐 Language Usage"
+)
+
+st.dataframe(
+    analytics["language_counts"],    
+    use_container_width=True,
+)
+
+st.dataframe(
+    analytics[
+        "generation_counts"
+    ],
+    use_container_width=True,
+)
+
+st.markdown(
+    "### 🌾 Top Published Crops"
+)
+
+st.dataframe(
+    analytics[
+        "top_crops"
+    ],
+    use_container_width=True,
+)
+
+st.markdown(
+    "### 📰 Top Sources"
+)
+
+st.dataframe(
+    analytics[
+        "top_sources"
+    ],
+    use_container_width=True,
+)
+
+st.markdown(
+    "### 📈 Publication Trend"
+)
+
+trend_df = pd.DataFrame(
+    analytics["publication_trend"]
+)
+
+if not trend_df.empty:
+
+    trend_df = trend_df.rename(
+       columns={
+            "publish_date": "Date",
+            "count": "Published"
+        }
+    )
+    st.line_chart(
+        trend_df.set_index("Date")
+    )

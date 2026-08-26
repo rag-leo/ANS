@@ -22,6 +22,7 @@ class PushGenerator:
         query: str,
         articles: list[dict],
         language: str,
+        crop: str | None,
     ) -> str:
 
         prompt = (
@@ -29,6 +30,7 @@ class PushGenerator:
                 query=query,
                 articles=articles,
                 language=language,
+                crop=crop,
             )
         )
 
@@ -45,10 +47,16 @@ class PushGenerator:
             )
         )
 
-        return (
+        generated_response = (
             response.choices[0]
             .message.content
         )
+
+        print("\n===== RAW GPT RESPONSE =====")
+        print(generated_response)
+        print("============================\n")
+
+        return generated_response
 
 
 class WhatsAppGenerator:
@@ -66,6 +74,7 @@ class WhatsAppGenerator:
         query: str,
         articles: list[dict],
         language: str,
+        crop: str | None,
     ) -> str:
 
         prompt = (
@@ -73,6 +82,7 @@ class WhatsAppGenerator:
                 query=query,
                 articles=articles,
                 language=language,
+                crop=crop,
             )
         )
 
@@ -88,6 +98,14 @@ class WhatsAppGenerator:
                 temperature=0.3,
             )
         )
+
+        print("\n========== LANGUAGE ==========")
+        print(language)
+        print("==============================\n")
+
+        print("\n========== PROMPT ==========")
+        print(prompt)
+        print("============================\n")
 
         return (
             response.choices[0]
@@ -110,6 +128,7 @@ class NewsletterGenerator:
         query: str,
         articles: list[dict],
         language: str,
+        crop: str | None,
     ) -> str:
 
         prompt = (
@@ -117,6 +136,7 @@ class NewsletterGenerator:
                 query=query,
                 articles=articles,
                 language=language,
+                crop=crop,
             )
         )
 

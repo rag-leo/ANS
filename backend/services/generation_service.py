@@ -76,12 +76,11 @@ class GenerationService:
         if not search_results:
 
             return {
-                "title": "",
-                "content": (
-                    "No relevant articles found "
-                    "for the query."
-                ),
+                "title": "No Articles Found",
+                "content": "No relevant articles found.",
                 "article_count": 0,
+                "article_ids": [],
+                "source_articles": [],
             }
 
         if generation_type == "push":
@@ -91,6 +90,7 @@ class GenerationService:
                     query=request.query,
                     articles=search_results,
                     language=request.language,
+                    crop=request.crop,
                 )
             )
 
@@ -101,6 +101,7 @@ class GenerationService:
                     query=request.query,
                     articles=search_results,
                     language=request.language,
+                    crop=request.crop,
                 )
             )
 
@@ -111,6 +112,7 @@ class GenerationService:
                     query=request.query,
                     articles=search_results,
                     language=request.language,
+                    crop=request.crop,
                 )
             )
 
@@ -129,6 +131,32 @@ class GenerationService:
             f"Generation type = {generation_type}"
         )
 
+        seen = set()
+
+        source_articles = []
+
+        for article in search_results:
+
+            if article["article_id"] in seen:
+                continue
+
+            seen.add(
+                article["article_id"]
+            )
+
+            source_articles.append(
+                {
+                    "article_id": article["article_id"],
+                    "title": article["title"],
+                    "source": article["source"],
+                    "crop": article["crop"],
+                    "score": round(
+                        article["score"],
+                        4,
+                    ),
+                }
+            )
+
         return {
             "generation_type": generation_type,
 
@@ -141,20 +169,16 @@ class GenerationService:
             ),
 
             "article_count": len(
-                search_results
+                source_articles
             ),
 
-            "article_ids": list(
-                {
-                    article["article_id"]
-                    for article in search_results
-                }
-            ),
-
-            "source_articles": [
-                article["title"]
-                for article in search_results
+            "article_ids": [
+                article["article_id"]
+                for article in source_articles
             ],
+
+            "source_articles":
+                source_articles,
         }
     def _extract_title(
         self,

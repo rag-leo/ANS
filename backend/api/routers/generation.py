@@ -39,6 +39,7 @@ def generate_content(
         content=generated_response["content"],
         article_count=generated_response["article_count"],
         article_ids=generated_response["article_ids"],
+        source_articles=generated_response["source_articles"],
     )
 
 

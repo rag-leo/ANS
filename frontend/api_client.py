@@ -111,3 +111,39 @@ def publish_content(
     response.raise_for_status()
 
     return response.json()
+
+def get_notification_history():
+
+    response = requests.get(
+        f"{API_BASE_URL}/publish/history",
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+def get_analytics_summary():
+
+    response = requests.get(
+        f"{API_BASE_URL}/analytics/summary",
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+def submit_evaluation(
+    payload,
+):
+
+    response = requests.post(
+        f"{API_BASE_URL}/evaluation/submit",
+        json=payload,
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()

@@ -30,7 +30,24 @@ class ContentRequest(
     generation_type: GenerationType
 
 
+class PublishRequest(
+    BaseModel
+):
 
+    article_ids: list[int]
+
+    generation_type: str
+
+    language: str
+
+class SourceArticle(
+    BaseModel
+):
+    article_id: int
+    title: str
+    source: str | None = None
+    crop: str | None = None
+    score: float | None = None
 
 class ContentResponse(BaseModel):
 
@@ -42,13 +59,4 @@ class ContentResponse(BaseModel):
 
     article_ids: list[int]
 
-
-class PublishRequest(
-    BaseModel
-):
-
-    article_ids: list[int]
-
-    generation_type: str
-
-    language: str
+    source_articles: list[SourceArticle]

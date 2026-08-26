@@ -33,7 +33,13 @@ from backend.api.routers.publish import (
     router as publish_router,
 )
 
+from backend.api.routers.analytics import (
+    router as analytics_router
+)   
 
+from backend.api.routers.evaluation import (
+    router as evaluation_router,
+)
 # ---------------------------------------------------------
 # Logging
 # ---------------------------------------------------------
@@ -196,6 +202,14 @@ app.include_router(
 
 app.include_router(
     publish_router
+)
+
+app.include_router(
+    analytics_router
+)
+
+app.include_router(
+    evaluation_router
 )
 # ---------------------------------------------------------
 # Root Endpoint

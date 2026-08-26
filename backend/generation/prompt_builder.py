@@ -39,8 +39,8 @@ Content:
         query: str,
         articles: list[dict],
         language: str,
+        crop: str | None,
     ) -> str:
-
         article_text = (
             PromptBuilder._build_article_text(
                 articles
@@ -80,6 +80,23 @@ The output language must strictly follow the requested language.
 
 Before returning the response, verify that both TITLE and CONTENT are entirely in {language}.
 
+CROP FOCUS REQUIREMENT
+
+User Selected Crop:
+{crop}
+
+The retrieved articles may contain information
+about multiple crops.
+
+Focus only on information relevant to {crop}.
+
+Ignore information related to other crops unless
+it directly impacts {crop}.
+
+If the selected crop is mentioned together with
+other crops, prioritize the selected crop while
+generating TITLE and CONTENT.
+
 TASK:
 
 Generate a push notification.
@@ -114,6 +131,7 @@ Retrieved Articles:
         query: str,
         articles: list[dict],
         language: str,
+        crop: str | None,
     ) -> str:
 
         article_text = (
@@ -125,35 +143,44 @@ Retrieved Articles:
         return f"""
 You are an agricultural communication specialist.
 
-IMPORTANT LANGUAGE INSTRUCTION:
+OUTPUT LANGUAGE REQUIREMENT
 
-Generate the ENTIRE response ONLY in {language}.
+Requested Language: {language}
 
-If language is Hindi:
-- Generate only Hindi.
-- Do not generate Marathi.
-- Do not generate English.
+The retrieved source articles may be written in Marathi.
 
-If language is Marathi:
-- Generate only Marathi.
-- Do not generate Hindi.
-- Do not generate English.
+Your first task is to translate all information from the source articles into {language}.
 
-If language is English:
-- Generate only English.
-- Do not generate Marathi.
-- Do not generate Hindi.
+Your second task is to generate the WhatsApp communication.
 
-Translate information from the source articles if required.
-The output language must strictly follow the requested language.
+The final TITLE and CONTENT must contain ONLY {language} text.
 
-Before returning the response, verify that both TITLE and CONTENT are entirely in {language}.
+If the requested language is Hindi:
+- Use standard Hindi.
+- Translate all Marathi text into Hindi.
+- Do not use Marathi words.
+- Do not mix Marathi and Hindi.
 
-TASK:
+Any Marathi text in the final output should be considered an error.
 
-Generate a WhatsApp daily digest.
+Return TITLE and CONTENT entirely in {language}.
 
-Return output in the following format:
+CROP FOCUS REQUIREMENT
+
+User Selected Crop:
+{crop}
+
+The retrieved articles may contain information
+about multiple crops.
+
+Focus only on information relevant to {crop}.
+
+Ignore information related to other crops unless
+it directly impacts {crop}.
+
+If the selected crop is mentioned together with
+other crops, prioritize the selected crop while
+generating TITLE and CONTENT.
 
 TITLE:
 <daily update heading>
@@ -183,6 +210,7 @@ Retrieved Articles:
         query: str,
         articles: list[dict],
         language: str,
+        crop: str | None,
     ) -> str:
 
         article_text = (
@@ -221,6 +249,22 @@ The output language must strictly follow the requested language.
 
 Before returning the response, verify that both TITLE and CONTENT are entirely in {language}.
 
+CROP FOCUS REQUIREMENT
+
+User Selected Crop:
+{crop}
+
+The retrieved articles may contain information
+about multiple crops.
+
+Focus only on information relevant to {crop}.
+
+Ignore information related to other crops unless
+it directly impacts {crop}.
+
+If the selected crop is mentioned together with
+other crops, prioritize the selected crop while
+generating TITLE and CONTENT.
 
 TASK:
 

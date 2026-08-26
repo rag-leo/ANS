@@ -214,3 +214,53 @@ class ArticleChunk(Base):
         "Article",
         back_populates="chunks",
     )
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Integer,
+    String,
+    Text,
+    TIMESTAMP,
+    func,
+)
+
+from backend.database.base import Base
+
+
+class EvaluationResult(Base):
+
+    __tablename__ = "evaluation_results"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    query = Column(Text)
+
+    crop = Column(String(255))
+
+    category = Column(String(255))
+
+    language = Column(String(50))
+
+    generation_type = Column(String(50))
+
+    retrieval_relevance = Column(Integer)
+
+    crop_focus = Column(Integer)
+
+    faithfulness = Column(Integer)
+
+    communication_quality = Column(Integer)
+
+    language_compliance = Column(Boolean)
+
+    comments = Column(Text)
+
+    evaluated_at = Column(
+        TIMESTAMP,
+        server_default=func.now(),
+    )    
