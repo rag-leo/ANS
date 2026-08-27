@@ -147,3 +147,58 @@ def submit_evaluation(
     response.raise_for_status()
 
     return response.json()
+
+def get_test_cases():
+
+    response = requests.get(
+        f"{API_BASE_URL}/evaluation/test-cases",
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+def get_evaluation_summary():
+
+    response = requests.get(
+        f"{API_BASE_URL}/evaluation/summary",
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+def get_evaluation_by_generation_type():
+
+    response = requests.get(
+        f"{API_BASE_URL}/evaluation/by-generation-type",
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+def get_evaluation_by_language():
+
+    response = requests.get(
+        f"{API_BASE_URL}/evaluation/by-language",
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+def get_lowest_rated_evaluations():
+
+    response = requests.get(
+        f"{API_BASE_URL}/evaluation/lowest-rated",
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()

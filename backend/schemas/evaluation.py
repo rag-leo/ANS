@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class EvaluationRequest(BaseModel):
 
-    query: str
+    query: str | None = None
 
     crop: str | None = None
 

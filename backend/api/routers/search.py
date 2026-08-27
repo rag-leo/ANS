@@ -25,43 +25,6 @@ def search(
     request: SearchRequest,
 ):
 
-    articles = get_articles()
-
-    if request.crop:
-
-        articles = [
-            article
-            for article in articles
-            if request.crop in article.get(
-                "crop",
-                []
-            )
-        ]
-
-    if request.category:
-
-        articles = [
-            article
-            for article in articles
-            if article.get(
-                "category"
-            ) == request.category
-        ]
-
-    if request.source:
-
-        articles = [
-            article
-            for article in articles
-            if article.get(
-                "source"
-            ) == request.source
-        ]
-
-    if not articles:
-
-        return []
-
     results = service.search(
         query=request.query,
         crop=request.crop,

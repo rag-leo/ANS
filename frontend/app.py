@@ -12,6 +12,11 @@ from api_client import (
     get_notification_history,
     get_analytics_summary,
     submit_evaluation,
+    get_test_cases,
+    get_evaluation_summary,
+    get_evaluation_by_generation_type,
+    get_evaluation_by_language,
+    get_lowest_rated_evaluations,
 )
 
 
@@ -267,6 +272,8 @@ if "generation_type" not in st.session_state:
 if "language" not in st.session_state:
     st.session_state.language = None    
 
+
+
 if search_button:
 
     crop_value = (
@@ -305,6 +312,14 @@ if search_button:
         language
     )
 
+    st.session_state.query = query
+
+    st.session_state.crop = crop_value
+
+    st.session_state.category = category_value
+
+    st.session_state.source = source_value
+
     st.session_state.filters = {
         "crop": crop_value,
         "category": category_value,
@@ -328,6 +343,11 @@ if search_button:
                 category=category_value,
                 source=source_value,
             )
+
+            print("\n===== SEARCH RESULTS =====")
+            print(f"Count = {len(results)}")
+            print(results)
+            print("==========================\n")
 
             st.session_state.search_results = (
                 results
@@ -587,18 +607,54 @@ if st.button(
 ):
 
     payload = {
-        "query": query,
-        "crop": crop,
-        "category": category,
-        "language": language,
-        "generation_type": generation_type,
-        "retrieval_relevance": retrieval_relevance,
-        "crop_focus": crop_focus,
-        "faithfulness": faithfulness,
-        "communication_quality": communication_quality,
-        "language_compliance": language_compliance,
-        "comments": comments,
+
+        "query":
+            st.session_state.get(
+                "query"
+            ),
+
+        "crop":
+            st.session_state.get(
+                "crop"
+            ),
+
+        "category":
+            st.session_state.get(
+                "category"
+            ),
+
+        "language":
+            st.session_state.get(
+                "language"
+            ),
+
+        "generation_type":
+            st.session_state.get(
+                "generation_type"
+            ),
+
+        "retrieval_relevance":
+            retrieval_relevance,
+
+        "crop_focus":
+            crop_focus,
+
+        "faithfulness":
+            faithfulness,
+
+        "communication_quality":
+            communication_quality,
+
+        "language_compliance":
+            language_compliance,
+
+        "comments":
+            comments,
     }
+
+    print("\n===== EVALUATION PAYLOAD =====")
+    print(payload)
+    print("==============================\n")
 
     submit_evaluation(
         payload
@@ -773,3 +829,211 @@ if not trend_df.empty:
     st.line_chart(
         trend_df.set_index("Date")
     )
+
+# ============================
+# Evaluation Summary Analytics
+#============================
+evaluation_summary = (
+    get_evaluation_summary()
+)
+
+st.markdown(
+    "## ✅ Evaluation Metrics"
+)
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric(
+    "Retrieval Relevance",
+    evaluation_summary[
+        "avg_retrieval_relevance"
+    ],
+)
+
+col2.metric(
+    "Crop Focus",
+    evaluation_summary[
+        "avg_crop_focus"
+    ],
+)
+
+col3.metric(
+    "Faithfulness",
+    evaluation_summary[
+        "avg_faithfulness"
+    ],
+)
+
+col4, col5, col6 = st.columns(3)
+
+col4.metric(
+    "Communication",
+    evaluation_summary[
+        "avg_communication_quality"
+    ],
+)
+
+col5.metric(
+    "Language Compliance",
+    f"{evaluation_summary['language_compliance_pct']}%"
+)
+
+col6.metric(
+    "Evaluations",
+    evaluation_summary[
+        "total_evaluations"
+    ],
+)
+
+#=============================================
+# Evaluation by Generation Type Analytics
+#=======================================
+
+st.markdown(
+    "### 📢 Evaluation by Generation Type"
+)
+
+generation_metrics = (
+    get_evaluation_by_generation_type()
+)
+
+st.dataframe(
+    generation_metrics,
+    use_container_width=True,
+)
+
+st.markdown(
+    "### 🌐 Evaluation by Language"
+)
+
+language_metrics = (
+    get_evaluation_by_language()
+)
+
+st.dataframe(
+    language_metrics,
+    use_container_width=True,
+)
+
+st.markdown(
+    "### ⚠️ Lowest Rated Evaluations"
+)
+
+lowest_rated = (
+    get_lowest_rated_evaluations()
+)
+
+st.dataframe(
+    lowest_rated,
+    use_container_width=True,
+)
+# =============================================
+# TEST CASE UI
+# =============================================
+# st.header(
+#     "🧪 Evaluation Test Cases"
+# )
+
+# test_cases = (
+#     get_test_cases()
+# )
+
+# selected_test_case = (
+#     st.selectbox(
+#         "Select Test Case",
+#         options=test_cases,
+#         format_func=lambda x:
+#             f"{x['id']} - {x['query']}",
+#     )
+# )
+
+# st.write(
+#     f"Crop: "
+#     f"{selected_test_case['crop']}"
+# )
+
+# st.write(
+#     f"Category: "
+#     f"{selected_test_case['category']}"
+# )
+
+# st.write(
+#     f"Language: "
+#     f"{selected_test_case['language']}"
+# )
+
+# st.write(
+#     f"Generation Type: "
+#     f"{selected_test_case['generation_type']}"
+# )
+
+# st.info(
+#     selected_test_case[
+#         "expected_outcome"
+#     ]
+# )
+
+# if st.button(
+#     "▶ Run Test Case"
+# ):
+
+#     st.session_state.query = (
+#         selected_test_case[
+#             "query"
+#         ]
+#     )
+
+#     st.session_state.crop = (
+#         selected_test_case[
+#             "crop"
+#         ]
+#     )
+
+#     st.session_state.category = (
+#         selected_test_case[
+#             "category"
+#         ]
+#     )
+
+#     st.session_state.language = (
+#         selected_test_case[
+#             "language"
+#         ]
+#     )
+
+#     st.session_state.generation_type = (
+#         selected_test_case[
+#             "generation_type"
+#         ]
+#     )
+
+# generate_content(
+#     query=
+#         selected_test_case[
+#             "query"
+#         ],
+
+#     crop=
+#         selected_test_case[
+#             "crop"
+#         ],
+
+#     category=
+#         selected_test_case[
+#             "category"
+#         ],
+
+#     source="Agrowon",
+
+#     language=
+#         selected_test_case[
+#             "language"
+#         ],
+
+#     generation_type=
+#         selected_test_case[
+#             "generation_type"
+#         ],
+# )
+
+# st.session_state.generated_response
