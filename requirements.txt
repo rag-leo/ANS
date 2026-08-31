@@ -15,6 +15,7 @@ streamlit==1.46.1
 pydantic==2.11.7
 pydantic-settings==2.10.1
 python-dotenv==1.1.1
+tzdata==2026.3
 
 # ==========================================================
 # Database
@@ -45,6 +46,7 @@ requests==2.32.3
 selenium==4.34.2
 beautifulsoup4==4.13.4
 protego==0.6.2
+PyYAML==6.0.2
 
 # ==========================================================
 # Text Processing

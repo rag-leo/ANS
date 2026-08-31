@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class ScrapedArticle(BaseModel):
 
-    section: str
+    section: str | None = None
 
     title: str
 
@@ -15,8 +15,8 @@ class ScrapedArticle(BaseModel):
 
     content_length: int
 
-    published_datetime: str | None = None
+    published_datetime: datetime | None = None
 
-    updated_datetime: str | None = None
+    updated_datetime: datetime | None = None
 
     scrape_date: str | None = None

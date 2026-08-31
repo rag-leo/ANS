@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     AZURE_OPENAI_EMBEDDING_DEPLOYMENT: str = Field(...)
     AZURE_OPENAI_CHAT_DEPLOYMENT: str = Field(...)
 
+    # Separate, deliberately cheaper deployment (e.g. gpt-4o-mini) used
+    # only for ingestion-time crop/category classification — kept
+    # distinct from AZURE_OPENAI_CHAT_DEPLOYMENT so a stronger/pricier
+    # model used for content generation doesn't also get used, at
+    # per-article volume, for a much simpler classification task.
+    AZURE_OPENAI_CLASSIFICATION_DEPLOYMENT: str = Field(...)
+
     # --------------------------------------------------------
     # Logging
     # --------------------------------------------------------

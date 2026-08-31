@@ -1,0 +1,55 @@
+name: krishi_jagran
+source_label: Krishi Jagran
+language: en
+timezone: Asia/Kolkata
+
+base_url: https://krishijagran.com
+user_agent: >-
+  Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+  AppleWebKit/537.36 (KHTML, like Gecko)
+  Chrome/120.0.0.0 Safari/537.36
+
+article_url_pattern: 'https://krishijagran\.com/news/[^/]+/$'
+concurrency: 3
+
+listing:
+  pagination_type: sitemap
+  # Krishi Jagran's news sitemap covers its entire historical archive
+  # (~19k URLs as of Stage 6 recon), newest-first, rather than a
+  # recent-only window like ET Agriculture's — so this run is capped
+  # to the most recent entries instead of walking the whole archive.
+  sitemap_url: https://krishijagran.com/sitemap/news
+  sitemap_max_urls: 30
+
+selectors:
+  title: h1
+  body_mode: paragraphs
+  # Semantic <article> tag scopes to just the real body paragraphs;
+  # an unscoped page-wide <p> search picks up footer/sidebar CTAs
+  # ("Subscribe to our Newsletter", "We're on WhatsApp!", app-download
+  # prompts) that sit outside it (see Stage 6 recon).
+  body_container: article
+  body_paragraph: p
+  min_paragraph_length: 40
+  # date_format left unset: dates come from JSON-LD (datePublished /
+  # dateModified), pre-normalized to zero-padded ISO-8601 offsets by
+  # the adapter, so base.py's default fromisoformat parsing applies.
+
+fetch:
+  render_js: false
+  page_load_timeout_seconds: 20
+
+retry:
+  max_attempts: 2
+  backoff_seconds: 2.0
+  on_listing_failure: skip_section
+
+rate_limit:
+  # Krishi Jagran sits behind Cloudflare (confirmed during recon, no
+  # active blocking observed at low volume) — kept conservative here
+  # since it's the one source of the three fronted by an active WAF.
+  min_interval_seconds: 1.5
+  respect_crawl_delay: true
+
+quality:
+  min_content_length: 300
