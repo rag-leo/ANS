@@ -3,6 +3,14 @@ import logging
 import sys
 from datetime import datetime, timezone
 
+# Standard LogRecord attributes, used to separate caller-supplied
+# `extra={...}` fields from the record's own bookkeeping fields.
+_LOG_RECORD_RESERVED_ATTRS = set(
+    logging.LogRecord(
+        "dummy", logging.INFO, "", 0, "", (), None
+    ).__dict__.keys()
+) | {"message"}
+
 
 class JsonFormatter(logging.Formatter):
 
@@ -17,7 +25,26 @@ class JsonFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
 
-        return json.dumps(payload)
+        if record.exc_info:
+            payload["exception"] = self.formatException(
+                record.exc_info
+            )
+
+        if record.stack_info:
+            payload["stack_info"] = self.formatStack(
+                record.stack_info
+            )
+
+        extra = {
+            key: value
+            for key, value in record.__dict__.items()
+            if key not in _LOG_RECORD_RESERVED_ATTRS
+        }
+
+        if extra:
+            payload["extra"] = extra
+
+        return json.dumps(payload, default=str)
 
 
 def configure_logging(log_level="INFO"):

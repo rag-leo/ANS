@@ -1,10 +1,12 @@
-import os
 import re
-import ssl
+import threading
 import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from datetime import datetime
+
+from protego import Protego
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -13,9 +15,53 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from backend.config.logging_config import get_logger
 from backend.ingestion.models import ScrapedArticle
 
-#----------------------------
+logger = get_logger(__name__)
+
+# A browser UA is required here: this site's CDN returns 403 for
+# non-browser User-Agents, including on robots.txt itself. Selenium's
+# headless Chrome already presents a browser UA for the actual scrape
+# requests below; this just makes the robots.txt check consistent
+# with that, rather than a separate, more bot-like request.
+_BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36"
+)
+
+_DEFAULT_MIN_REQUEST_INTERVAL_SECONDS = 1.0
+
+
+class _RateLimiter:
+    """
+    Thread-safe minimum-interval limiter, shared across all worker
+    threads so concurrent scraping still spaces out real requests
+    to the target site.
+    """
+
+    def __init__(self, min_interval_seconds: float) -> None:
+
+        self._min_interval = min_interval_seconds
+        self._lock = threading.Lock()
+        self._last_request_at = 0.0
+
+    def wait(self) -> None:
+
+        with self._lock:
+
+            now = time.monotonic()
+            remaining = (
+                self._min_interval
+                - (now - self._last_request_at)
+            )
+
+            if remaining > 0:
+                time.sleep(remaining)
+
+            self._last_request_at = time.monotonic()
+
 
 class AgrowonScraper:
     """
@@ -30,19 +76,101 @@ class AgrowonScraper:
 
     BASE_URL = "https://agrowon.esakal.com"
 
+    ROBOTS_TXT_URL = f"{BASE_URL}/robots.txt"
+
     ARTICLE_PATTERN = re.compile(
         r"https://agrowon\.esakal\.com/.+/.+-[a-z0-9]+$"
     )
 
     MAX_WORKERS = 3
 
+    MAX_SCROLL_ATTEMPTS = 8
+
+    SCROLL_PAUSE_SECONDS = 1.5
+
     def __init__(self) -> None:
 
-        os.environ["WDM_SSL_VERIFY"] = "0"
+        self._robot_parser: Protego | None = None
+        self._rate_limiter: _RateLimiter | None = None
 
-        ssl._create_default_https_context = (
-            ssl._create_unverified_context
-        )
+    # -----------------------------------------------------
+    # robots.txt / rate limiting
+    # -----------------------------------------------------
+
+    def _get_robot_parser(self) -> Protego | None:
+        """
+        Lazily fetches and caches robots.txt for this instance.
+
+        Uses `protego` rather than the standard library's
+        `urllib.robotparser`: this site's robots.txt relies
+        heavily on `*` wildcard Disallow patterns (e.g.
+        `/search*`), which `robotparser` silently fails to
+        match at all (it treats `*` as a literal character),
+        making it effectively a no-op against this file.
+        `protego` implements the wildcard-aware matching real
+        crawlers use.
+
+        Returns None if robots.txt can't be retrieved at all, in
+        which case callers should fail open rather than block
+        scraping over a transient network issue.
+        """
+
+        if self._robot_parser is not None:
+            return self._robot_parser
+
+        try:
+            request = urllib.request.Request(
+                self.ROBOTS_TXT_URL,
+                headers={"User-Agent": _BROWSER_USER_AGENT},
+            )
+
+            with urllib.request.urlopen(
+                request, timeout=10
+            ) as response:
+                content = response.read().decode(
+                    "utf-8", errors="replace"
+                )
+
+            parser = Protego.parse(content)
+
+        except Exception:
+            logger.exception(
+                "Failed to fetch robots.txt; "
+                "proceeding without robots.txt checks"
+            )
+            return None
+
+        self._robot_parser = parser
+        return parser
+
+    def _is_allowed(self, url: str) -> bool:
+
+        parser = self._get_robot_parser()
+
+        if parser is None:
+            return True
+
+        return parser.can_fetch(url, _BROWSER_USER_AGENT)
+
+    def _get_rate_limiter(self) -> _RateLimiter:
+
+        if self._rate_limiter is None:
+
+            parser = self._get_robot_parser()
+
+            crawl_delay = (
+                parser.crawl_delay(_BROWSER_USER_AGENT)
+                if parser is not None
+                else None
+            )
+
+            self._rate_limiter = _RateLimiter(
+                float(crawl_delay)
+                if crawl_delay
+                else _DEFAULT_MIN_REQUEST_INTERVAL_SECONDS
+            )
+
+        return self._rate_limiter
 
     @staticmethod
     def _clean(text: str) -> str:
@@ -66,11 +194,38 @@ class AgrowonScraper:
 
         return webdriver.Chrome(options=options)
 
+    def _scroll_to_load_content(self, driver) -> None:
+        """
+        Scrolls to trigger lazy-loaded content, stopping as soon
+        as the page stops growing instead of always waiting for
+        a fixed number of iterations.
+        """
+
+        last_height = driver.execute_script(
+            "return document.body.scrollHeight"
+        )
+
+        for _ in range(self.MAX_SCROLL_ATTEMPTS):
+
+            driver.execute_script(
+                "window.scrollTo(0, document.body.scrollHeight);"
+            )
+
+            time.sleep(self.SCROLL_PAUSE_SECONDS)
+
+            new_height = driver.execute_script(
+                "return document.body.scrollHeight"
+            )
+
+            if new_height == last_height:
+                break
+
+            last_height = new_height
+
     def collect_article_urls(
         self,
     ) -> list[str]:
         driver = self._create_driver()
-
 
         article_urls = set()
 
@@ -78,22 +233,29 @@ class AgrowonScraper:
 
             for section_name, section_url in self.SECTIONS.items():
 
-                print(
-                    f"\n🔎 Collecting URLs from: "
-                    f"{section_name}"
+                if not self._is_allowed(section_url):
+                    logger.warning(
+                        "Skipping section disallowed by robots.txt",
+                        extra={"section": section_name, "url": section_url},
+                    )
+                    continue
+
+                logger.info(
+                    "Collecting URLs from section",
+                    extra={"section": section_name},
                 )
+
+                self._get_rate_limiter().wait()
 
                 driver.get(section_url)
 
-                time.sleep(3)
-
-                for _ in range(4):
-
-                    driver.execute_script(
-                        "window.scrollTo(0, document.body.scrollHeight);"
+                WebDriverWait(driver, 20).until(
+                    EC.presence_of_element_located(
+                        (By.TAG_NAME, "a")
                     )
+                )
 
-                    time.sleep(2)
+                self._scroll_to_load_content(driver)
 
                 soup = BeautifulSoup(
                     driver.page_source,
@@ -117,18 +279,26 @@ class AgrowonScraper:
 
             driver.quit()
 
-        print(
-            f"\n✅ Total unique URLs collected: "
-            f"{len(article_urls)}"
+        logger.info(
+            "Finished collecting article URLs",
+            extra={"url_count": len(article_urls)},
         )
 
         return list(article_urls)
-
 
     def scrape_article(
         self,
         url: str,
     ) -> ScrapedArticle | None:
+
+        if not self._is_allowed(url):
+            logger.warning(
+                "Skipping article disallowed by robots.txt",
+                extra={"url": url},
+            )
+            return None
+
+        self._get_rate_limiter().wait()
 
         driver = self._create_driver()
 
@@ -223,6 +393,11 @@ class AgrowonScraper:
 
         except Exception:
 
+            logger.exception(
+                "Failed to scrape article",
+                extra={"url": url},
+            )
+
             return None
 
         finally:
@@ -234,9 +409,9 @@ class AgrowonScraper:
     ) -> list:
         urls = self.collect_article_urls()
 
-
-        print(
-            "\n⚡ Scraping articles in parallel...\n"
+        logger.info(
+            "Scraping articles in parallel",
+            extra={"url_count": len(urls), "max_workers": self.MAX_WORKERS},
         )
 
         articles = []
@@ -268,17 +443,14 @@ class AgrowonScraper:
                         article
                     )
 
-                    print(
-                        f"✔ {article.title[:70]}"
+                    logger.info(
+                        "Scraped article",
+                        extra={"title": article.title[:70]},
                     )
 
-        print(
-            "\n================ SUMMARY ================"
-        )
-
-        print(
-            f"Total valid articles: "
-            f"{len(articles)}"
+        logger.info(
+            "Finished scraping articles",
+            extra={"valid_article_count": len(articles)},
         )
 
         return articles

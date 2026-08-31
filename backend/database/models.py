@@ -4,18 +4,24 @@ import uuid
 from datetime import datetime, date
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Date
-from sqlalchemy import DateTime
-from sqlalchemy import ForeignKey
-from sqlalchemy import String
-from sqlalchemy import Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    BigInteger,
+    String,
+    Text,
+    TIMESTAMP,
+    func,
+)
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 
-from backend.database.base import Base
-
-from sqlalchemy import Column, Integer, BigInteger
+from backend.database.base import Base, utcnow
 
 
 class Article(Base):
@@ -98,14 +104,14 @@ class Article(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utcnow,
+        onupdate=utcnow,
         nullable=False,
     )
 
@@ -171,7 +177,7 @@ class GeneratedContent(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False,
     )
 
@@ -215,18 +221,6 @@ class ArticleChunk(Base):
         back_populates="chunks",
     )
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Integer,
-    String,
-    Text,
-    TIMESTAMP,
-    func,
-)
-
-from backend.database.base import Base
-
 
 class EvaluationResult(Base):
 
@@ -263,4 +257,27 @@ class EvaluationResult(Base):
     evaluated_at = Column(
         TIMESTAMP,
         server_default=func.now(),
-    )    
+    )
+
+
+class EvaluationTestCase(Base):
+
+    __tablename__ = "evaluation_test_cases"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    query = Column(Text)
+
+    crop = Column(String(255))
+
+    category = Column(String(255))
+
+    language = Column(String(50))
+
+    generation_type = Column(String(50))
+
+    expected_outcome = Column(Text)

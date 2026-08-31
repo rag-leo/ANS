@@ -1,7 +1,3 @@
-# `generated_content_repository.py`
-
-
-#```python
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -41,7 +37,9 @@ class GeneratedContentRepository:
     def get_by_article(
         db: Session,
         article_id: UUID,
-    ) -> list : (
+    ) -> list:
+
+        return (
             db.query(GeneratedContent)
             .filter(
                 GeneratedContent.article_id == article_id

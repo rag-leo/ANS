@@ -68,8 +68,29 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO")
 
     # --------------------------------------------------------
+    # CORS
+    # --------------------------------------------------------
+
+    # Comma-separated list of origins allowed to call this API.
+    ALLOWED_ORIGINS: str = Field(
+        default="http://localhost:8501,http://127.0.0.1:8501"
+    )
+
+    # --------------------------------------------------------
     # Computed Properties
     # --------------------------------------------------------
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """
+        ALLOWED_ORIGINS as a list, for CORSMiddleware.
+        """
+
+        return [
+            origin.strip()
+            for origin in self.ALLOWED_ORIGINS.split(",")
+            if origin.strip()
+        ]
 
     @property
     def database_url(self) -> str:

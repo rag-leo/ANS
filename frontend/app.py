@@ -1,11 +1,11 @@
 import logging
-from datetime import date
 from typing import Optional
 
 import httpx
 import streamlit as st
 
 from api_client import (
+    BACKEND_URL,
     search,
     generate_content,
     publish_content,
@@ -27,8 +27,6 @@ from api_client import (
 APP_TITLE = "Agri-News Intelligence System"
 APP_SUBTITLE = "AI Notification & Information Generation using the News knowledge-base"
 
-DEFAULT_BACKEND_URL = "http://localhost:8000"
-
 
 # ==========================================================
 # Logging
@@ -40,26 +38,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-
-# ==========================================================
-# Backend Configuration
-# ==========================================================
-
-def get_backend_url() -> str:
-    """
-    Retrieves backend API URL from Streamlit secrets.
-
-    Falls back to localhost for local development.
-    """
-
-    try:
-        return st.secrets["BACKEND_API_URL"]
-    except Exception:
-        return DEFAULT_BACKEND_URL
-
-
-BACKEND_URL = get_backend_url()
 
 
 # ==========================================================
@@ -203,11 +181,6 @@ with st.sidebar:
         index=0,
     )
 
-    published_date = st.date_input(
-        "Published Date",
-        value=date.today(),
-    )
-
     language = st.selectbox(
         "Language",
         options=[
@@ -228,23 +201,6 @@ with st.sidebar:
         index=0,
     )
 
-    content_length = st.selectbox(
-        "Content Length",
-        options=[
-            "Short",
-            "Medium",
-            "Long"
-        ],
-        index=0,
-    )
-
-    notification_count = st.slider(
-        "Number of Notifications",
-        min_value=1,
-        max_value=3,
-        value=1,
-    )
-
     st.divider()
 
     search_button = st.button(
@@ -256,9 +212,6 @@ with st.sidebar:
 # ==========================================================
 # Session State
 # ==========================================================
-
-if "filters" not in st.session_state:
-    st.session_state.filters = {}
 
 if "search_results" not in st.session_state:
     st.session_state.search_results = []
@@ -320,17 +273,6 @@ if search_button:
 
     st.session_state.source = source_value
 
-    st.session_state.filters = {
-        "crop": crop_value,
-        "category": category_value,
-        "source": source_value,
-        "published_date": str(published_date),
-        "language": language,
-        "channel": channel,
-        "content_length": content_length,
-        "notification_count": notification_count,
-    }
-
     try:
 
         with st.spinner(
@@ -344,10 +286,10 @@ if search_button:
                 source=source_value,
             )
 
-            print("\n===== SEARCH RESULTS =====")
-            print(f"Count = {len(results)}")
-            print(results)
-            print("==========================\n")
+            logger.debug(
+                "Search returned %d result(s)",
+                len(results),
+            )
 
             st.session_state.search_results = (
                 results
@@ -367,9 +309,10 @@ if search_button:
             )
 
 
-            print("\n===== GENERATION RESPONSE =====")
-            print(generation_response)
-            print("===============================\n")
+            logger.debug(
+                "Generation response: %r",
+                generation_response,
+            )
 
             st.session_state.generated_response = (
                 generation_response
@@ -652,9 +595,10 @@ if st.button(
             comments,
     }
 
-    print("\n===== EVALUATION PAYLOAD =====")
-    print(payload)
-    print("==============================\n")
+    logger.debug(
+        "Evaluation payload: %r",
+        payload,
+    )
 
     submit_evaluation(
         payload

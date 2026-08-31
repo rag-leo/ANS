@@ -1,3 +1,15 @@
+"""
+Ad-hoc Similarity Ranking Check
+
+Manual script, not part of the automated test suite: it makes
+real calls against Azure OpenAI to embed a query and a small set
+of in-memory documents, then ranks them by cosine similarity.
+Useful for eyeballing embedding quality without touching the DB.
+
+Run:
+    python -m scripts.manual.check_similarity_search
+"""
+
 from sklearn.metrics.pairwise import cosine_similarity
 
 from backend.services.embedding_service import (
@@ -5,7 +17,7 @@ from backend.services.embedding_service import (
 )
 
 
-def test_similarity():
+def check_similarity() -> None:
 
     service = EmbeddingService()
 
@@ -62,4 +74,4 @@ def test_similarity():
 
 
 if __name__ == "__main__":
-    test_similarity()
+    check_similarity()

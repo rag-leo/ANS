@@ -1,6 +1,10 @@
+import re
+
 from backend.config.generation_config import (
     GENERATION_CONFIG,
 )
+
+from backend.config.logging_config import get_logger
 
 from backend.generation.generators import (
     PushGenerator,
@@ -10,6 +14,13 @@ from backend.generation.generators import (
 
 from backend.services.retrieval_service import (
     RetrievalService,
+)
+
+logger = get_logger(__name__)
+
+_TITLE_CONTENT_PATTERN = re.compile(
+    r"TITLE\s*:\s*(?P<title>.*?)\s*CONTENT\s*:\s*(?P<content>.*)",
+    re.IGNORECASE | re.DOTALL,
 )
 
 
@@ -83,6 +94,8 @@ class GenerationService:
                 "source_articles": [],
             }
 
+        max_tokens = generation_settings["max_tokens"]
+
         if generation_type == "push":
 
             generated_content = (
@@ -91,6 +104,7 @@ class GenerationService:
                     articles=search_results,
                     language=request.language,
                     crop=request.crop,
+                    max_tokens=max_tokens,
                 )
             )
 
@@ -102,6 +116,7 @@ class GenerationService:
                     articles=search_results,
                     language=request.language,
                     crop=request.crop,
+                    max_tokens=max_tokens,
                 )
             )
 
@@ -113,6 +128,7 @@ class GenerationService:
                     articles=search_results,
                     language=request.language,
                     crop=request.crop,
+                    max_tokens=max_tokens,
                 )
             )
 
@@ -123,12 +139,12 @@ class GenerationService:
                 f"{generation_type}"
             )
 
-        print(
-            f"Language received = {request.language}"
-        )    
-
-        print(
-            f"Generation type = {generation_type}"
+        logger.debug(
+            "Generated content",
+            extra={
+                "language": request.language,
+                "generation_type": generation_type,
+            },
         )
 
         seen = set()
@@ -157,16 +173,16 @@ class GenerationService:
                 }
             )
 
+        title, content = self._parse_generated_content(
+            generated_content
+        )
+
         return {
             "generation_type": generation_type,
 
-            "title": self._extract_title(
-                generated_content
-            ),
+            "title": title,
 
-            "content": self._extract_content(
-                generated_content
-            ),
+            "content": content,
 
             "article_count": len(
                 source_articles
@@ -180,60 +196,44 @@ class GenerationService:
             "source_articles":
                 source_articles,
         }
-    def _extract_title(
+
+    def _parse_generated_content(
         self,
         generated_content: str,
-    ) -> str:
+    ) -> tuple[str, str]:
+        """
+        Splits a "TITLE: ... CONTENT: ..." response into
+        (title, content), tolerating case and whitespace
+        differences. Falls back to using the first line as
+        the title if the model didn't follow the format,
+        rather than silently returning an empty title.
+        """
 
-        if "TITLE:" not in generated_content:
+        generated_content = generated_content or ""
 
-            return ""
-
-        start = (
-            generated_content.find(
-                "TITLE:"
-            ) + len("TITLE:")
-        )
-
-        end = (
-            generated_content.find(
-                "CONTENT:"
-            )
-        )
-
-        if end == -1:
-
-            return (
-                generated_content[start:]
-                .strip()
-            )
-
-        return (
-            generated_content[
-                start:end
-            ]
-            .strip()
-        )
-
-
-    def _extract_content(
-        self,
-        generated_content: str,
-    ) -> str:
-
-        if "CONTENT:" not in (
+        match = _TITLE_CONTENT_PATTERN.search(
             generated_content
-        ):
-
-            return generated_content
-
-        start = (
-            generated_content.find(
-                "CONTENT:"
-            ) + len("CONTENT:")
         )
 
-        return (
-            generated_content[start:]
-            .strip()
-        )    
+        if match:
+            return (
+                match.group("title").strip(),
+                match.group("content").strip(),
+            )
+
+        logger.warning(
+            "Generated content did not follow the "
+            "TITLE/CONTENT format; falling back to "
+            "heuristic parsing"
+        )
+
+        lines = [
+            line.strip()
+            for line in generated_content.strip().splitlines()
+            if line.strip()
+        ]
+
+        if not lines:
+            return "", ""
+
+        return lines[0], generated_content.strip()

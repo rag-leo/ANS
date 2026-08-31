@@ -1,5 +1,5 @@
 """
-Azure OpenAI Connectivity Test
+Azure OpenAI Connectivity Check
 
 Purpose:
 - Validate Azure OpenAI configuration
@@ -7,8 +7,11 @@ Purpose:
 - Validate embedding deployment
 - Verify authentication
 
+Manual script, not part of the automated test suite: it makes a
+real call against Azure OpenAI and needs valid credentials in .env.
+
 Run:
-    python -m tests.test_openai_connection
+    python -m scripts.manual.check_openai_connection
 """
 
 from openai import AzureOpenAI
@@ -16,13 +19,13 @@ from openai import AzureOpenAI
 from backend.config.settings import settings
 
 
-def test_embedding_connection() -> None:
+def check_embedding_connection() -> None:
     """
-    Test Azure OpenAI embedding deployment.
+    Checks the Azure OpenAI embedding deployment.
     """
 
     print("\n" + "=" * 60)
-    print("AZURE OPENAI CONNECTIVITY TEST")
+    print("AZURE OPENAI CONNECTIVITY CHECK")
     print("=" * 60)
 
     print(f"Endpoint   : {settings.AZURE_OPENAI_ENDPOINT}")
@@ -49,7 +52,7 @@ def test_embedding_connection() -> None:
 
 if __name__ == "__main__":
     try:
-        test_embedding_connection()
+        check_embedding_connection()
 
     except Exception as ex:
         print("\n❌ Azure OpenAI Connection Failed")

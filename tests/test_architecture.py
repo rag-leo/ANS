@@ -13,10 +13,6 @@ from backend.services.article_service import (
     ArticleService,
 )
 
-from backend.services.ingestion_service import (
-    IngestionService,
-)
-
 from backend.services.embedding_service import (
     EmbeddingService,
 )
@@ -43,7 +39,6 @@ def test_imports():
     assert GeneratedContentRepository is not None
 
     assert ArticleService is not None
-    assert IngestionService is not None
 
     assert EmbeddingService is not None
     assert RetrievalService is not None

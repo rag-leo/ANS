@@ -11,8 +11,18 @@ class SearchRequest(BaseModel):
 
     source: str | None = None
 
+    generation_type: str | None = None
+
+    max_age_days: int | None = None
+
+    top_k: int = 5
+
 
 class SearchResponse(BaseModel):
+
+    article_id: int
+
+    chunk_id: int
 
     title: str
 
@@ -20,7 +30,7 @@ class SearchResponse(BaseModel):
 
     score: float
 
-    crop: list[str] | None = None
+    crop: str | None = None
 
     category: str | None = None
 

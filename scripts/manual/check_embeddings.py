@@ -1,9 +1,19 @@
+"""
+Embedding Generation Check
+
+Manual script, not part of the automated test suite: it makes a
+real call against Azure OpenAI and needs valid credentials in .env.
+
+Run:
+    python -m scripts.manual.check_embeddings
+"""
+
 from backend.services.embedding_service import (
     EmbeddingService,
 )
 
 
-def test_embeddings():
+def check_embeddings() -> None:
 
     service = EmbeddingService()
 
@@ -31,4 +41,4 @@ def test_embeddings():
 
 
 if __name__ == "__main__":
-    test_embeddings()
+    check_embeddings()

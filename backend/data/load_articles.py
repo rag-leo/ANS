@@ -1,5 +1,3 @@
-import json
-
 from backend.ingestion.agrowon_scraper import (
     AgrowonScraper,
 )
@@ -23,11 +21,6 @@ from backend.repositories.article_repository import (
 from backend.repositories.article_chunk_repository import (
     ArticleChunkRepository,
 )
-
-OUTPUT_FILE = (
-    "backend/data/articles.json"
-)
-
 
 def load_articles():
 

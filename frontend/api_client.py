@@ -1,8 +1,26 @@
 import requests
+import streamlit as st
 
-import requests
+DEFAULT_BACKEND_URL = "http://localhost:8000"
 
-API_BASE_URL = "http://localhost:8000"
+
+def get_backend_url() -> str:
+    """
+    Retrieves backend API URL from Streamlit secrets.
+
+    Falls back to localhost for local development.
+    """
+
+    try:
+        return st.secrets["BACKEND_API_URL"]
+    except Exception:
+        return DEFAULT_BACKEND_URL
+
+
+BACKEND_URL = get_backend_url()
+
+# Must match the backend's settings.API_PREFIX.
+API_PREFIX = "/api"
 
 
 def generate_embedding(
@@ -13,7 +31,7 @@ def generate_embedding(
     """
 
     response = requests.post(
-        f"{API_BASE_URL}/embed",
+        f"{BACKEND_URL}{API_PREFIX}/embed",
         json={
             "text": text,
         },
@@ -33,7 +51,7 @@ def search(
 ):
 
     response = requests.post(
-        f"{API_BASE_URL}/search",
+        f"{BACKEND_URL}{API_PREFIX}/search",
         json={
             "query": query,
             "crop": crop,
@@ -54,7 +72,7 @@ def health_check() -> dict:
     """
 
     response = requests.get(
-        f"{API_BASE_URL}/health",
+        f"{BACKEND_URL}/health",
         timeout=30,
     )
 
@@ -71,7 +89,7 @@ def generate_content(
     generation_type="push",
 ):
     response = requests.post(
-        f"{API_BASE_URL}/generate",
+        f"{BACKEND_URL}{API_PREFIX}/generate",
         json={
             "query": query,
             "crop": crop,
@@ -84,8 +102,6 @@ def generate_content(
     )
 
     response.raise_for_status()
-
-    print(response)
 
     return response.json()
 
@@ -103,7 +119,7 @@ def publish_content(
     }
 
     response = requests.post(
-        f"{API_BASE_URL}/publish",
+        f"{BACKEND_URL}{API_PREFIX}/publish",
         json=payload,
         timeout=30,
     )
@@ -115,7 +131,7 @@ def publish_content(
 def get_notification_history():
 
     response = requests.get(
-        f"{API_BASE_URL}/publish/history",
+        f"{BACKEND_URL}{API_PREFIX}/publish/history",
         timeout=30,
     )
 
@@ -126,7 +142,7 @@ def get_notification_history():
 def get_analytics_summary():
 
     response = requests.get(
-        f"{API_BASE_URL}/analytics/summary",
+        f"{BACKEND_URL}{API_PREFIX}/analytics/summary",
         timeout=30,
     )
 
@@ -139,7 +155,7 @@ def submit_evaluation(
 ):
 
     response = requests.post(
-        f"{API_BASE_URL}/evaluation/submit",
+        f"{BACKEND_URL}{API_PREFIX}/evaluation/submit",
         json=payload,
         timeout=30,
     )
@@ -151,7 +167,7 @@ def submit_evaluation(
 def get_test_cases():
 
     response = requests.get(
-        f"{API_BASE_URL}/evaluation/test-cases",
+        f"{BACKEND_URL}{API_PREFIX}/evaluation/test-cases",
         timeout=30,
     )
 
@@ -162,7 +178,7 @@ def get_test_cases():
 def get_evaluation_summary():
 
     response = requests.get(
-        f"{API_BASE_URL}/evaluation/summary",
+        f"{BACKEND_URL}{API_PREFIX}/evaluation/summary",
         timeout=30,
     )
 
@@ -173,7 +189,7 @@ def get_evaluation_summary():
 def get_evaluation_by_generation_type():
 
     response = requests.get(
-        f"{API_BASE_URL}/evaluation/by-generation-type",
+        f"{BACKEND_URL}{API_PREFIX}/evaluation/by-generation-type",
         timeout=30,
     )
 
@@ -184,7 +200,7 @@ def get_evaluation_by_generation_type():
 def get_evaluation_by_language():
 
     response = requests.get(
-        f"{API_BASE_URL}/evaluation/by-language",
+        f"{BACKEND_URL}{API_PREFIX}/evaluation/by-language",
         timeout=30,
     )
 
@@ -195,7 +211,7 @@ def get_evaluation_by_language():
 def get_lowest_rated_evaluations():
 
     response = requests.get(
-        f"{API_BASE_URL}/evaluation/lowest-rated",
+        f"{BACKEND_URL}{API_PREFIX}/evaluation/lowest-rated",
         timeout=30,
     )
 
