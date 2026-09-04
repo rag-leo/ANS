@@ -1,11 +1,7 @@
-from datetime import datetime
+from backend.database.base import utcnow
 
 from backend.database.session import (
     SessionLocal,
-)
-
-from backend.models.notification_history import (
-    NotificationHistory,
 )
 
 from backend.models.notification_history import (
@@ -33,7 +29,7 @@ class NotificationHistoryRepository:
                         generation_type=generation_type,
                         language=language,
                         is_published=True,
-                        published_at=datetime.utcnow(),
+                        published_at=utcnow(),
                     )
                 )
 

@@ -1,0 +1,53 @@
+name: agrowon
+source_label: Agrowon
+language: mr
+timezone: Asia/Kolkata
+
+base_url: https://agrowon.esakal.com
+user_agent: >-
+  Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+  AppleWebKit/537.36 (KHTML, like Gecko)
+  Chrome/120.0.0.0 Safari/537.36
+
+article_url_pattern: 'https://agrowon\.esakal\.com/.+/.+-[a-z0-9]+$'
+concurrency: 3
+
+listing:
+  pagination_type: infinite_scroll
+  max_scroll_attempts: 8
+  scroll_pause_seconds: 1.5
+  sections:
+    - name: market-intelligence
+      url: https://agrowon.esakal.com/market-intelligence
+    - name: agro-special
+      url: https://agrowon.esakal.com/agro-special
+    - name: weather-news
+      url: https://agrowon.esakal.com/weather-news
+
+selectors:
+  title: h1
+  body_paragraph: p
+  min_paragraph_length: 40
+  published_date_container: 'div[data-test-id="publishDetails"]'
+  updated_date_container: 'div[data-test-id="updateDetails"]'
+  date_element: time
+  date_attribute: datetime
+  # date_format left unset: Agrowon's datetime attribute is already ISO-8601
+
+fetch:
+  render_js: true
+  page_load_timeout_seconds: 20
+  wait_for_selector: h1
+  listing_wait_for_selector: a
+
+retry:
+  max_attempts: 2
+  backoff_seconds: 2.0
+  on_listing_failure: skip_section
+
+rate_limit:
+  min_interval_seconds: 1.0
+  respect_crawl_delay: true
+
+quality:
+  min_content_length: 300

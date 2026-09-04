@@ -1,0 +1,46 @@
+name: et_agriculture
+source_label: ET Agriculture
+language: en
+timezone: Asia/Kolkata
+
+base_url: https://agriculture.economictimes.indiatimes.com
+user_agent: >-
+  Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+  AppleWebKit/537.36 (KHTML, like Gecko)
+  Chrome/120.0.0.0 Safari/537.36
+
+article_url_pattern: 'https://agriculture\.economictimes\.indiatimes\.com/news/[^/]+/[^/]+/\d+$'
+concurrency: 3
+
+listing:
+  pagination_type: sitemap
+  # Google News sitemap covering recently published articles; used
+  # instead of scraping/scrolling category listing pages, since
+  # articles beyond the first few there load via an unexposed
+  # client-side call (see Stage 4 recon).
+  sitemap_url: https://agriculture.economictimes.indiatimes.com/jcms-sitemaps/agriculture/48hours/sitemap-48hours.xml
+
+selectors:
+  title: h1
+  body_mode: container_text
+  body_container: '.article-content'
+  published_date_pattern: 'Published On (.+?) IST'
+  date_format: '%b %d, %Y at %I:%M %p'
+  # updated_date_pattern left unset: no separate "updated" text was
+  # observed on sampled articles.
+
+fetch:
+  render_js: false
+  page_load_timeout_seconds: 20
+
+retry:
+  max_attempts: 2
+  backoff_seconds: 2.0
+  on_listing_failure: skip_section
+
+rate_limit:
+  min_interval_seconds: 1.0
+  respect_crawl_delay: true
+
+quality:
+  min_content_length: 300

@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     AZURE_OPENAI_EMBEDDING_DEPLOYMENT: str = Field(...)
     AZURE_OPENAI_CHAT_DEPLOYMENT: str = Field(...)
 
+    # Separate, deliberately cheaper deployment (e.g. gpt-4o-mini) used
+    # only for ingestion-time crop/category classification — kept
+    # distinct from AZURE_OPENAI_CHAT_DEPLOYMENT so a stronger/pricier
+    # model used for content generation doesn't also get used, at
+    # per-article volume, for a much simpler classification task.
+    AZURE_OPENAI_CLASSIFICATION_DEPLOYMENT: str = Field(...)
+
     # --------------------------------------------------------
     # Logging
     # --------------------------------------------------------
@@ -68,8 +75,29 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO")
 
     # --------------------------------------------------------
+    # CORS
+    # --------------------------------------------------------
+
+    # Comma-separated list of origins allowed to call this API.
+    ALLOWED_ORIGINS: str = Field(
+        default="http://localhost:8501,http://127.0.0.1:8501"
+    )
+
+    # --------------------------------------------------------
     # Computed Properties
     # --------------------------------------------------------
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """
+        ALLOWED_ORIGINS as a list, for CORSMiddleware.
+        """
+
+        return [
+            origin.strip()
+            for origin in self.ALLOWED_ORIGINS.split(",")
+            if origin.strip()
+        ]
 
     @property
     def database_url(self) -> str:

@@ -6,6 +6,7 @@ from sqlalchemy import pool
 from alembic import context
 
 import backend.database.models
+import backend.models.notification_history
 
 from backend.config.settings import settings
 from backend.database.base import Base

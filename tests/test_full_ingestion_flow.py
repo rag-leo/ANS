@@ -35,21 +35,10 @@ def test_flow():
         )
     )
 
-    print(
-        f"Title: {transformed.title}"
-    )
-
-    print(
-        f"Crop: {transformed.crop}"
-    )
-
-    print(
-        f"Source: {transformed.source}"
-    )
-
-    print(
-        "✅ Full ingestion flow passed"
-    )
+    assert transformed.title == "केळी दरात वाढ"
+    assert transformed.crop == "केळी"
+    assert transformed.category == "Market Intelligence"
+    assert transformed.source == "Agrowon"
 
 
 if __name__ == "__main__":

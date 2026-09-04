@@ -21,10 +21,6 @@ from backend.config.logging_config import (
 )
 from backend.config.settings import settings
 
-from backend.api.routers.catalog import (
-    router as catalog_router,
-)
-
 from backend.api.routers.generation import (
     router as generation_router,
 )
@@ -97,16 +93,9 @@ app = FastAPI(
 # CORS Configuration
 # ---------------------------------------------------------
 
-ALLOWED_ORIGINS = [
-    "http://localhost:8501",  # Streamlit local development
-]
-
-if settings.ENVIRONMENT.lower() != "prod":
-    ALLOWED_ORIGINS.append("http://127.0.0.1:8501")
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -183,33 +172,35 @@ app.include_router(
 
 app.include_router(
     embedding_router,
+    prefix=settings.API_PREFIX,
     tags=["Embeddings"],
 )
 
 app.include_router(
     search_router,
+    prefix=settings.API_PREFIX,
     tags=["Search"],
 )
 
 app.include_router(
-    catalog_router,
-)
-
-app.include_router(
     generation_router,
+    prefix=settings.API_PREFIX,
     tags=["Generation"],
 )
 
 app.include_router(
-    publish_router
+    publish_router,
+    prefix=settings.API_PREFIX,
 )
 
 app.include_router(
-    analytics_router
+    analytics_router,
+    prefix=settings.API_PREFIX,
 )
 
 app.include_router(
-    evaluation_router
+    evaluation_router,
+    prefix=settings.API_PREFIX,
 )
 # ---------------------------------------------------------
 # Root Endpoint

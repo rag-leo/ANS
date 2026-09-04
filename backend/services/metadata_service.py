@@ -1,3 +1,8 @@
+from backend.config.logging_config import get_logger
+
+logger = get_logger(__name__)
+
+
 class MetadataService:
 
     KEYWORD_CROPS = [
@@ -14,13 +19,8 @@ class MetadataService:
         "टोमॅटो",
         "मिरची",
         "डाळिंब",
-        "केळी", 
-        "मिरची", 
-        "भुईमूग", 
-        "मका", 
-        "कांदा", 
-        "भात", 
-        "डाळिंब", 
+        "भुईमूग",
+        "भात",
         "बटाटा",
     ]
 
@@ -176,23 +176,14 @@ class MetadataService:
         ):
             category = best_category
 
-            print("\n-------------------")
-
-            print(
-                f"TITLE: {title}"
+            logger.debug(
+                "Category classified",
+                extra={
+                    "title": title,
+                    "category_scores": category_scores,
+                    "selected_category": category,
+                },
             )
-
-            print(
-                f"CATEGORY SCORES: "
-                f"{category_scores}"
-            )
-
-            print(
-                f"SELECTED CATEGORY: "
-                f"{category}"
-            )
-
-            print("-------------------")
 
         else:
             category = "General"
