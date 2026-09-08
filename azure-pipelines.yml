@@ -1,0 +1,140 @@
+# Triggered by pushes to Azure Repos main (company deployment policy —
+# this repo's canonical source for deployment is Azure Repos, not
+# GitHub). Builds one backend image (serves both the Container App and
+# the ingestion Container App Job) and deploys the frontend to App
+# Service separately as native Python (no Selenium/Chrome dependency
+# there — see frontend/requirements.txt).
+#
+# Placeholders below (acrName, resourceGroup, containerAppName,
+# containerAppJobName, webAppName, azureSubscription) need real values
+# for your Azure resources and DevOps service connections — none of
+# this could be filled in without access to your Azure subscription.
+
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  acrName: '<your-acr-name>'
+  imageRepository: 'ans-backend'
+  containerRegistry: '$(acrName).azurecr.io'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+  resourceGroup: '<your-resource-group>'
+  containerAppName: '<your-backend-container-app-name>'
+  containerAppJobName: '<your-ingestion-container-app-job-name>'
+  webAppName: '<your-frontend-app-service-name>'
+  # Azure DevOps service connection with rights on the subscription
+  azureSubscription: '<your-azure-service-connection-name>'
+  # Service connection to the container registry (Docker@2 task)
+  acrServiceConnection: '<your-acr-service-connection-name>'
+
+stages:
+
+  - stage: Build
+    displayName: Build and push backend image
+    jobs:
+      - job: BuildAndPush
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: Docker@2
+            displayName: Build and push image to ACR
+            inputs:
+              containerRegistry: '$(acrServiceConnection)'
+              repository: '$(imageRepository)'
+              command: buildAndPush
+              Dockerfile: '$(dockerfilePath)'
+              tags: |
+                $(tag)
+                latest
+
+  - stage: DeployBackend
+    displayName: Deploy backend Container App
+    dependsOn: Build
+    jobs:
+      - deployment: DeployContainerApp
+        pool:
+          vmImage: ubuntu-latest
+        environment: production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: Update Container App image
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az containerapp update \
+                        --name $(containerAppName) \
+                        --resource-group $(resourceGroup) \
+                        --image $(containerRegistry)/$(imageRepository):$(tag)
+
+  - stage: DeployIngestionJob
+    displayName: Update ingestion Container App Job image
+    dependsOn: Build
+    jobs:
+      - deployment: DeployJob
+        pool:
+          vmImage: ubuntu-latest
+        environment: production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: Update Container App Job image
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      az containerapp job update \
+                        --name $(containerAppJobName) \
+                        --resource-group $(resourceGroup) \
+                        --image $(containerRegistry)/$(imageRepository):$(tag)
+                      # The job's command (`python -m backend.data.pipeline`)
+                      # and its cron schedule are configured once on the Job
+                      # resource itself (portal or `az containerapp job
+                      # create`), not re-set on every deploy here — this step
+                      # only refreshes which image the job runs.
+
+  - stage: DeployFrontend
+    displayName: Deploy frontend to App Service
+    dependsOn: Build
+    jobs:
+      - deployment: DeployWebApp
+        pool:
+          vmImage: ubuntu-latest
+        environment: production
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: ArchiveFiles@2
+                  displayName: Archive frontend/
+                  inputs:
+                    rootFolderOrFile: '$(Build.SourcesDirectory)/frontend'
+                    includeRootFolder: false
+                    archiveType: zip
+                    archiveFile: '$(Build.ArtifactStagingDirectory)/frontend.zip'
+                - task: AzureWebApp@1
+                  displayName: Deploy to App Service
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    appType: webAppLinux
+                    appName: '$(webAppName)'
+                    package: '$(Build.ArtifactStagingDirectory)/frontend.zip'
+                    startUpCommand: 'bash startup.sh'
+
+# Database migrations (alembic upgrade head) are deliberately NOT run
+# automatically on every push here — see README.md's "Running
+# migrations" section for the manual, explicit invocation pattern
+# (a separate, manually-triggered Container App Job using this same
+# image). Auto-running migrations on every deploy risks concurrent
+# migration races and makes an accidental bad push harder to reason
+# about.
