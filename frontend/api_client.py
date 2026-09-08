@@ -1,3 +1,5 @@
+import os
+
 import requests
 import streamlit as st
 
@@ -6,10 +8,19 @@ DEFAULT_BACKEND_URL = "http://localhost:8000"
 
 def get_backend_url() -> str:
     """
-    Retrieves backend API URL from Streamlit secrets.
+    Retrieves the backend API URL.
 
-    Falls back to localhost for local development.
+    Checks BACKEND_API_URL as a plain environment variable first —
+    Azure App Service's Application Settings are exposed to the
+    process this way, not via a generated .streamlit/secrets.toml —
+    then falls back to Streamlit secrets (local/other hosting), then
+    localhost for local development.
     """
+
+    env_value = os.environ.get("BACKEND_API_URL")
+
+    if env_value:
+        return env_value
 
     try:
         return st.secrets["BACKEND_API_URL"]

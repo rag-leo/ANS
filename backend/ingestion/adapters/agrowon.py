@@ -1,11 +1,13 @@
 # backend/ingestion/adapters/agrowon.py
 
+import os
 import re
 import time
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -80,7 +82,26 @@ class AgrowonAdapter(ScraperAdapter):
         options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-dev-shm-usage")
 
-        return webdriver.Chrome(options=options)
+        # In containers we install a specific, pinned Chromium build
+        # rather than relying on Selenium Manager to discover or
+        # download a browser at runtime (nondeterministic, and slower
+        # per-run). CHROME_BINARY_PATH/CHROMEDRIVER_PATH are unset in
+        # local dev, where Selenium Manager's normal auto-discovery
+        # against a locally installed Chrome still applies unchanged.
+        chrome_binary = os.environ.get("CHROME_BINARY_PATH")
+
+        if chrome_binary:
+            options.binary_location = chrome_binary
+
+        chromedriver_path = os.environ.get("CHROMEDRIVER_PATH")
+
+        service = (
+            Service(executable_path=chromedriver_path)
+            if chromedriver_path
+            else None
+        )
+
+        return webdriver.Chrome(options=options, service=service)
 
     def _scroll_to_load_content(self, driver) -> None:
         """

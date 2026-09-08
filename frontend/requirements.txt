@@ -1,0 +1,9 @@
+# Deliberately scoped to just what frontend/app.py and api_client.py
+# need — the frontend is a pure HTTP client of the backend API (see
+# api_client.py), so it doesn't need selenium/psycopg2/pgvector/etc.
+# Azure App Service's Oryx build picks up this file when the app root
+# is set to frontend/.
+streamlit==1.46.1
+requests==2.32.3
+httpx==0.28.1
+pandas==2.3.1
