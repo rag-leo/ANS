@@ -5,6 +5,11 @@
 # Service separately as native Python (no Selenium/Chrome dependency
 # there — see frontend/requirements.txt).
 #
+# The image is built via ACR Tasks (`az acr build`) rather than a
+# Docker@2 task — the build runs server-side in ACR itself, so no
+# Docker daemon is needed on the pipeline agent (company build
+# machines don't have Docker installed).
+#
 # Placeholders below (acrName, resourceGroup, containerAppName,
 # containerAppJobName, webAppName, azureSubscription) need real values
 # for your Azure resources and DevOps service connections — none of
@@ -25,30 +30,35 @@ variables:
   containerAppName: '<your-backend-container-app-name>'
   containerAppJobName: '<your-ingestion-container-app-job-name>'
   webAppName: '<your-frontend-app-service-name>'
-  # Azure DevOps service connection with rights on the subscription
+  # Azure DevOps service connection with rights on the subscription —
+  # its service principal needs AcrPush (or Contributor) on the
+  # registry itself, since it now drives `az acr build` directly
+  # instead of a separate Docker-registry-scoped service connection.
   azureSubscription: '<your-azure-service-connection-name>'
-  # Service connection to the container registry (Docker@2 task)
-  acrServiceConnection: '<your-acr-service-connection-name>'
 
 stages:
 
   - stage: Build
-    displayName: Build and push backend image
+    displayName: Build backend image via ACR Tasks
     jobs:
-      - job: BuildAndPush
+      - job: BuildImage
         pool:
           vmImage: ubuntu-latest
         steps:
-          - task: Docker@2
-            displayName: Build and push image to ACR
+          - task: AzureCLI@2
+            displayName: az acr build
             inputs:
-              containerRegistry: '$(acrServiceConnection)'
-              repository: '$(imageRepository)'
-              command: buildAndPush
-              Dockerfile: '$(dockerfilePath)'
-              tags: |
-                $(tag)
-                latest
+              azureSubscription: '$(azureSubscription)'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az acr build \
+                  --registry $(acrName) \
+                  --resource-group $(resourceGroup) \
+                  --image $(imageRepository):$(tag) \
+                  --image $(imageRepository):latest \
+                  --file $(dockerfilePath) \
+                  $(Build.SourcesDirectory)
 
   - stage: DeployBackend
     displayName: Deploy backend Container App
