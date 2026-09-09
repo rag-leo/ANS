@@ -10,10 +10,14 @@
 # Docker daemon is needed on the pipeline agent (company build
 # machines don't have Docker installed).
 #
-# Placeholders below (acrName, resourceGroup, containerAppName,
-# containerAppJobName, webAppName, azureSubscription) need real values
-# for your Azure resources and DevOps service connections — none of
-# this could be filled in without access to your Azure subscription.
+# Resource names below point at the DF-RAGAPP resource group.
+# containerAppJobName (dfragappcaj01) must be created before this
+# pipeline's DeployIngestionJob stage can succeed — it isn't
+# provisioned by this pipeline. azureSubscription must be created as
+# an Azure DevOps service connection (Azure Resource Manager type,
+# service principal scoped to DF-RAGAPP-RG) with AcrPush rights on
+# dfragappacr01 and update rights on the Container App / Job / App
+# Service, before the first run.
 
 trigger:
   branches:
@@ -21,20 +25,20 @@ trigger:
       - main
 
 variables:
-  acrName: '<your-acr-name>'
+  acrName: 'dfragappacr01'
   imageRepository: 'ans-backend'
   containerRegistry: '$(acrName).azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
-  resourceGroup: '<your-resource-group>'
-  containerAppName: '<your-backend-container-app-name>'
-  containerAppJobName: '<your-ingestion-container-app-job-name>'
-  webAppName: '<your-frontend-app-service-name>'
+  resourceGroup: 'DF-RAGAPP-RG'
+  containerAppName: 'dfragappca01'
+  containerAppJobName: 'dfragappcaj01'
+  webAppName: 'dfragapp01'
   # Azure DevOps service connection with rights on the subscription —
   # its service principal needs AcrPush (or Contributor) on the
   # registry itself, since it now drives `az acr build` directly
   # instead of a separate Docker-registry-scoped service connection.
-  azureSubscription: '<your-azure-service-connection-name>'
+  azureSubscription: 'DF-RAGAPP-ARM-SC'
 
 stages:
 
